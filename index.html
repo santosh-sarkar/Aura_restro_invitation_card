@@ -3,12 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Name Card Generator</title>
+  <title>Aura Restro Invitation Card Generator</title>
   <style>
-    @font-face {
-      font-family: 'Brolink DEMO';
-      src: url('Brolink DEMO/Brolink DEMO.ttf') format('truetype');
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant:wght@400;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -201,12 +198,11 @@
       toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    const CARD_IMAGE = 'card.jpeg';
-    const FONT_PATH = 'Brolink DEMO/Brolink DEMO.ttf';
-    const FONT_FAMILY = 'Brolink DEMO';
-    const FONT_SIZE = 35.1;
+    const CARD_IMAGE = 'InvitationCard.jpeg';
+    const FONT_FAMILY = 'Cormorant';
+    const FONT_SIZE = 40;
     const TEXT_COLOR = '#C1883C';
-    const BOTTOM_OFFSET = 155;
+    const BOTTOM_OFFSET = 145;
 
     let cardImage = null;
 
@@ -220,9 +216,7 @@
     }
 
     async function loadFont() {
-      const font = new FontFace(FONT_FAMILY, `url('${FONT_PATH}')`);
-      await font.load();
-      document.fonts.add(font);
+      await document.fonts.load(`700 35.1px "${FONT_FAMILY}"`);
     }
 
     function generateCard(name) {
@@ -235,12 +229,12 @@
 
       const maxWidth = canvas.width - 40;
       let fontSize = FONT_SIZE;
-      ctx.font = `${fontSize}px "${FONT_FAMILY}"`;
+      ctx.font = `bold ${fontSize}px "${FONT_FAMILY}"`;
       let textWidth = ctx.measureText(name).width;
 
       while (textWidth > maxWidth && fontSize > 8) {
         fontSize -= 0.5;
-        ctx.font = `${fontSize}px "${FONT_FAMILY}"`;
+        ctx.font = `bold ${fontSize}px "${FONT_FAMILY}"`;
         textWidth = ctx.measureText(name).width;
       }
 
@@ -300,7 +294,7 @@
       cardGrid.innerHTML = '';
       generatedCards = [];
 
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 500));
 
       for (const name of names) {
         const canvas = generateCard(name);

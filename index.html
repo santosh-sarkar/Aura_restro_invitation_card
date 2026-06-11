@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Name Card Generator</title>
+  <style>
+    @font-face {
+      font-family: 'Brolink DEMO';
+      src: url('Brolink DEMO/Brolink DEMO.ttf') format('truetype');
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0d0d0d;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1rem;
+    }
+    .container { max-width: 1200px; width: 100%; }
+    h1 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      font-weight: 300;
+      letter-spacing: 2px;
+      color: #D4AF37;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 2rem;
+      font-size: 0.9rem;
+    }
+    .input-area {
+      display: flex;
+      gap: 0.5rem;
+      max-width: 600px;
+      margin: 0 auto 2rem;
+    }
+    .input-area input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #eee;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-area input:focus { border-color: #D4AF37; }
+    .input-area button {
+      padding: 0.75rem 1.5rem;
+      background: #D4AF37;
+      color: #0d0d0d;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .input-area button:hover:not(:disabled) { background: #c4a030; }
+    .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      justify-content: center;
+    }
+    .card {
+      background: #1a1a1a;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      transition: transform 0.2s;
+    }
+    .card:hover { transform: translateY(-3px); }
+    .card img {
+      display: block;
+      max-width: 280px;
+      height: auto;
+    }
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 1rem;
+      border-top: 1px solid #2a2a2a;
+    }
+    .card-footer .name-label {
+      color: #D4AF37;
+      font-size: 0.85rem;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 160px;
+    }
+    .card-footer .download-btn {
+      padding: 0.35rem 0.9rem;
+      background: #D4AF37;
+      color: #0d0d0d;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .card-footer .download-btn:hover { background: #c4a030; }
+    #downloadAllBtn {
+      padding: 0.7rem 2rem;
+      background: #D4AF37;
+      color: #0d0d0d;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #downloadAllBtn:hover { background: #c4a030; }
+    .status {
+      text-align: center;
+      color: #666;
+      margin-top: 2rem;
+      font-size: 0.9rem;
+    }
+    .loading {
+      color: #D4AF37;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Name Cards</h1>
+    <p class="subtitle">Enter names separated by commas</p>
+
+    <div class="input-area">
+      <input type="text" id="nameInput" placeholder="e.g. John, Sarah, Michael" />
+      <button id="generateBtn" disabled>Generate</button>
+    </div>
+
+    <div style="text-align:center;margin-bottom:1rem">
+      <button id="downloadAllBtn" style="display:none">Download All as ZIP</button>
+    </div>
+
+    <div class="grid" id="cardGrid"></div>
+    <div class="status" id="status">Loading assets...</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    const nameInput = document.getElementById('nameInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    const cardGrid = document.getElementById('cardGrid');
+    const status = document.getElementById('status');
+
+    const CARD_IMAGE = 'card.jpeg';
+    const FONT_PATH = 'Brolink DEMO/Brolink DEMO.ttf';
+    const FONT_FAMILY = 'Brolink DEMO';
+    const FONT_SIZE = 35.1;
+    const TEXT_COLOR = '#C1883C';
+    const BOTTOM_OFFSET = 155;
+
+    let cardImage = null;
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+        img.src = src;
+      });
+    }
+
+    async function loadFont() {
+      const font = new FontFace(FONT_FAMILY, `url('${FONT_PATH}')`);
+      await font.load();
+      document.fonts.add(font);
+    }
+
+    function generateCard(name) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = cardImage.naturalWidth;
+      canvas.height = cardImage.naturalHeight;
+
+      ctx.drawImage(cardImage, 0, 0);
+
+      const maxWidth = canvas.width - 40;
+      let fontSize = FONT_SIZE;
+      ctx.font = `${fontSize}px "${FONT_FAMILY}"`;
+      let textWidth = ctx.measureText(name).width;
+
+      while (textWidth > maxWidth && fontSize > 8) {
+        fontSize -= 0.5;
+        ctx.font = `${fontSize}px "${FONT_FAMILY}"`;
+        textWidth = ctx.measureText(name).width;
+      }
+
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+
+      ctx.fillText(name, canvas.width / 2, canvas.height - BOTTOM_OFFSET);
+
+      return canvas;
+    }
+
+    function createCardElement(canvas, name) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const img = document.createElement('img');
+      img.src = canvas.toDataURL();
+      img.alt = name;
+      card.appendChild(img);
+
+      const footer = document.createElement('div');
+      footer.className = 'card-footer';
+
+      const label = document.createElement('span');
+      label.className = 'name-label';
+      label.textContent = name;
+      footer.appendChild(label);
+
+      const downloadBtn = document.createElement('button');
+      downloadBtn.className = 'download-btn';
+      downloadBtn.textContent = 'Download';
+      downloadBtn.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = `${name.replace(/[^a-zA-Z0-9]/g, '_')}_card.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+      footer.appendChild(downloadBtn);
+
+      card.appendChild(footer);
+      return card;
+    }
+
+    let generatedCards = [];
+
+    function generate() {
+      const raw = nameInput.value.trim();
+      if (!raw) return;
+
+      const names = raw.split(',').map(n => n.trim()).filter(Boolean);
+      if (names.length === 0) return;
+
+      cardGrid.innerHTML = '';
+      status.textContent = '';
+      generatedCards = [];
+
+      for (const name of names) {
+        const canvas = generateCard(name);
+        generatedCards.push({ name, canvas });
+        const el = createCardElement(canvas, name);
+        cardGrid.appendChild(el);
+      }
+
+      downloadAllBtn.style.display = names.length > 2 ? 'inline-block' : 'none';
+    }
+
+    downloadAllBtn.addEventListener('click', async () => {
+      if (generatedCards.length === 0) return;
+      status.textContent = 'Creating ZIP...';
+      const zip = new JSZip();
+      const promises = generatedCards.map(({ name, canvas }) => {
+        return new Promise(resolve => {
+          canvas.toBlob(blob => {
+            zip.file(`${name.replace(/[^a-zA-Z0-9]/g, '_')}.png`, blob);
+            resolve();
+          });
+        });
+      });
+      await Promise.all(promises);
+      const content = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.download = 'cards.zip';
+      link.href = URL.createObjectURL(content);
+      link.click();
+      URL.revokeObjectURL(link.href);
+      status.textContent = '';
+    });
+
+    async function init() {
+      try {
+        status.textContent = 'Loading font...';
+        await loadFont();
+        status.textContent = 'Loading card template...';
+        cardImage = await loadImage(CARD_IMAGE);
+        generateBtn.disabled = false;
+        status.textContent = '';
+        nameInput.focus();
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+        status.style.color = '#ff6b6b';
+      }
+    }
+
+    generateBtn.addEventListener('click', generate);
+    nameInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') generate();
+    });
+
+    init();
+  </script>
+</body>
+</html>

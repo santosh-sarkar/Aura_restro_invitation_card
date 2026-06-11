@@ -128,6 +128,26 @@
       transition: background 0.2s;
     }
     #downloadAllBtn:hover { background: #c4a030; }
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #D4AF37;
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
     .status {
       text-align: center;
       color: #666;
@@ -162,6 +182,8 @@
     <div class="status" id="status">Loading assets...</div>
   </div>
 
+  <div id="toast" class="toast"></div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script>
     const nameInput = document.getElementById('nameInput');
@@ -169,6 +191,15 @@
     const downloadAllBtn = document.getElementById('downloadAllBtn');
     const cardGrid = document.getElementById('cardGrid');
     const status = document.getElementById('status');
+    const toast = document.getElementById('toast');
+    let toastTimer;
+
+    function showToast(msg) {
+      clearTimeout(toastTimer);
+      toast.textContent = msg;
+      toast.classList.add('show');
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+    }
 
     const CARD_IMAGE = 'card.jpeg';
     const FONT_PATH = 'Brolink DEMO/Brolink DEMO.ttf';
@@ -256,16 +287,20 @@
 
     let generatedCards = [];
 
-    function generate() {
+    async function generate() {
       const raw = nameInput.value.trim();
       if (!raw) return;
 
       const names = raw.split(',').map(n => n.trim()).filter(Boolean);
       if (names.length === 0) return;
 
+      generateBtn.disabled = true;
+      generateBtn.textContent = 'Generating...';
+      status.textContent = 'Generating cards...';
       cardGrid.innerHTML = '';
-      status.textContent = '';
       generatedCards = [];
+
+      await new Promise(r => setTimeout(r, 1000));
 
       for (const name of names) {
         const canvas = generateCard(name);
@@ -275,6 +310,10 @@
       }
 
       downloadAllBtn.style.display = names.length > 2 ? 'inline-block' : 'none';
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Generate';
+      status.textContent = '';
+      showToast(`${names.length} card${names.length > 1 ? 's' : ''} generated!`);
     }
 
     downloadAllBtn.addEventListener('click', async () => {
